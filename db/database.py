@@ -12,6 +12,11 @@ SessionLocal = scoped_session(sessionmaker(autocommit=False, bind=engine))
 def init_db():
     Base.metadata.create_all(bind=engine)
 
+
+def get_db():
+    return SessionLocal()
+
+
 @contextmanager
 def session_scope():
     session = SessionLocal()
