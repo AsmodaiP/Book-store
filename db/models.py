@@ -3,7 +3,7 @@ from datetime import datetime
 
 from flask_login import UserMixin
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Text, Enum
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Text, Enum, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import enum
@@ -23,6 +23,7 @@ class User(Base, UserMixin):
 
     # Relationships
     orders = relationship("Order", back_populates="user")
+    cart = relationship("Cart", back_populates="user", uselist=False)
 
 
 class Genre(Base):
@@ -98,3 +99,35 @@ class OrderItem(Base):
     # Relationships
     order = relationship("Order", back_populates="items")
     book = relationship("Book")
+
+
+class Cart(Base):
+    __tablename__ = "carts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    total_price = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="cart")
+    items = relationship("CartItem", back_populates="cart", cascade="all, delete-orphan")
+
+
+class CartItem(Base):
+    __tablename__ = "cart_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cart_id = Column(Integer, ForeignKey("carts.id"), nullable=False)
+    book_id = Column(Integer, ForeignKey("books.id"), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    cart = relationship("Cart", back_populates="items")
+    book = relationship("Book")
+
+    # Unique constraint to prevent duplicate books in cart
+    __table_args__ = (UniqueConstraint("cart_id", "book_id", name="unique_cart_book"),)
