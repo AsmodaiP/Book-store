@@ -1,5 +1,5 @@
 from flask_restx import Resource, fields, Namespace
-from flask import request
+from flask import request, jsonify
 from db.database import get_db
 from db.models import User
 from app.schemas import UserVerify
@@ -30,7 +30,7 @@ class SendVerificationCode(Resource):
         # Проверяем, существует ли пользователь с таким номером
         user = db.query(User).filter(User.phone == phone).first()
         if not user:
-            ns.abort(404, message="User with this phone number not found")
+            return jsonify({"error": "User with this phone number not found"}), 404
 
         # Генерируем код подтверждения
         code = "".join(random.choices(string.digits, k=6))
@@ -43,7 +43,7 @@ class SendVerificationCode(Resource):
 
         # TODO: Здесь должна быть отправка SMS с кодом
         # Для тестирования возвращаем код в ответе
-        return {"message": "Verification code sent", "code": code}, 200
+        return jsonify({"message": "Verification code sent", "code": code}), 200
 
 
 @ns.route("/verify")
@@ -57,16 +57,16 @@ class VerifyPhone(Resource):
 
         user = db.query(User).filter(User.phone == data.phone).first()
         if not user:
-            ns.abort(404, message="User with this phone number not found")
+            return jsonify({"error": "User with this phone number not found"}), 404
 
         if not user.verification_code or not user.verification_code_expires:
-            ns.abort(400, message="No verification code was sent")
+            return jsonify({"error": "No verification code was sent"}), 400
 
         if datetime.utcnow() > user.verification_code_expires:
-            ns.abort(400, message="Verification code has expired")
+            return jsonify({"error": "Verification code has expired"}), 400
 
         if user.verification_code != data.code:
-            ns.abort(400, message="Invalid verification code")
+            return jsonify({"error": "Invalid verification code"}), 400
 
         # Подтверждаем пользователя
         user.is_verified = True
@@ -74,4 +74,4 @@ class VerifyPhone(Resource):
         user.verification_code_expires = None
         db.commit()
 
-        return {"message": "Phone number verified successfully"}, 200
+        return jsonify({"message": "Phone number verified successfully"}), 200
