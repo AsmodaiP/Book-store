@@ -18,7 +18,7 @@ ns = Namespace("books", description="Book operations")
 book_model = api.model(
     "Book",
     {
-        "id": fields.String(description="Book UUID"),
+        "id": fields.Integer(description="Book ID"),
         "title": fields.String(required=True, description="Book title"),
         "author": fields.String(required=True, description="Book author"),
         "price": fields.Float(required=True, description="Book price"),
@@ -44,7 +44,7 @@ review_model = api.model(
 def book_to_response(book: Book) -> dict:
     return json.loads(
         BookResponse(
-            id=str(book.id),
+            id=book.id,
             title=str(book.title),
             author=str(book.author),
             price=float(book.price),
