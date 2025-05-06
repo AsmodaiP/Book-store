@@ -34,17 +34,18 @@ user_response_model = ns.model(
     },
 )
 
-registration_model = api.model(
+registration_model = ns.model(
     "Registration",
     {
         "username": fields.String(required=True, min_length=4, max_length=100, description="Username"),
         "email": fields.String(required=True, description="Email address"),
+        "phone": fields.String(required=True, description="Phone number"),
         "password": fields.String(required=True, min_length=8, max_length=36, description="Password"),
         "confirm_password": fields.String(required=True, description="Confirm password"),
     },
 )
 
-login_model = api.model(
+login_model = ns.model(
     "Login",
     {
         "email": fields.String(required=True, description="Email address"),
@@ -135,6 +136,10 @@ class UserRegister(Resource):
             # Check existing username
             if db.query(User).filter_by(username=user_data.username).first():
                 return {"error": "User with this username already exists"}, 400
+
+            # Check existing phone
+            if db.query(User).filter_by(phone=user_data.phone).first():
+                return {"error": "User with this phone number already exists"}, 400
 
             user = User(
                 username=user_data.username,
