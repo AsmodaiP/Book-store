@@ -233,6 +233,7 @@ class BookReview(Resource):
         db.commit()
         # Пересчитать средний рейтинг
         avg_rating = db.query(func.avg(Review.rating)).filter(Review.book_id == book.id).scalar()
+        avg_rating = 0 if avg_rating is None else avg_rating
         book.rating = avg_rating
         db.commit()
         return "", 204
