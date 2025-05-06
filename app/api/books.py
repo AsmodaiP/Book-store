@@ -234,3 +234,26 @@ class BookReviews(Resource):
             return {"error": "Book not found"}, 404
         reviews = db.query(Review).filter_by(book_id=book.id).order_by(Review.created_at.desc()).all()
         return [review_to_response(r) for r in reviews]
+
+
+@ns.route("/genre/<string:genre_name>")
+@ns.param("genre_name", "The genre name")
+class BooksByGenre(Resource):
+    @ns.doc("get_books_by_genre")
+    @ns.marshal_list_with(book_model)
+    def get(self, genre_name):
+        """Get all books by genre name (fuzzy search)"""
+        db = get_db()
+
+        # Находим жанры по названию с использованием ilike для нечеткого поиска
+        genres = db.query(Genre).filter(Genre.name.ilike(f"%{genre_name}%")).all()
+        if not genres:
+            return jsonify({"error": f"No genres found matching '{genre_name}'"}), 404
+
+        # Получаем все книги для найденных жанров
+        books = []
+        for genre in genres:
+            genre_books = db.query(Book).filter(Book.genre_id == genre.id).all()
+            books.extend([book_to_response(book) for book in genre_books])
+
+        return books
