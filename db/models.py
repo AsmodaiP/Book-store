@@ -3,7 +3,7 @@ from datetime import datetime
 
 from flask_login import UserMixin
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -14,7 +14,11 @@ class User(Base, UserMixin):
     id = Column(Integer, primary_key=True)
     username = Column(String(length=80), unique=True)
     email = Column(String(length=80), unique=True)
+    phone = Column(String(length=15), unique=True, nullable=False)
     password_hash = Column(String(length=255))
+    is_verified = Column(Boolean, default=False)
+    verification_code = Column(String(length=6), nullable=True)
+    verification_code_expires = Column(DateTime, nullable=True)
 
 
 class Genre(Base):

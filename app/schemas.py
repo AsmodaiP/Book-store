@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, constr, validator
 from typing import Optional, List
 from datetime import datetime
+import re
 
 
 # Book schemas
@@ -40,13 +41,20 @@ class BookResponse(BookBase):
 
 # User schemas
 class UserBase(BaseModel):
-    username: str = Field(..., min_length=4, max_length=100)
+    username: constr(min_length=3, max_length=80)
     email: EmailStr
+    phone: constr(regex=r"^\+?1?\d{9,15}$")  # Валидация номера телефона
 
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8, max_length=36)
+    password: constr(min_length=6)
     confirm_password: str
+
+    @validator("confirm_password")
+    def passwords_match(cls, v, values, **kwargs):
+        if "password" in values and v != values["password"]:
+            raise ValueError("passwords do not match")
+        return v
 
 
 class UserLogin(BaseModel):
@@ -54,8 +62,14 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserVerify(BaseModel):
+    phone: constr(regex=r"^\+?1?\d{9,15}$")
+    code: constr(min_length=6, max_length=6)
+
+
 class UserResponse(UserBase):
     id: int
+    is_verified: bool
 
     class Config:
         from_attributes = True
