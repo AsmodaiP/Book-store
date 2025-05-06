@@ -21,7 +21,7 @@ class Genre(Base):
     __tablename__ = "genres"
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
-    # books = relationship('Book', back_populates='genre')  # если нужно получить все книги жанра
+    books = relationship("Book", back_populates="genre", cascade="all, delete-orphan")
 
 
 class Book(Base):
@@ -31,8 +31,8 @@ class Book(Base):
     title = Column(String, nullable=False)
     author = Column(String, nullable=False)
     price = Column(Float, nullable=False)
-    genre_id = Column(Integer, ForeignKey("genres.id"), nullable=False)
-    genre = relationship("Genre")
+    genre_id = Column(Integer, ForeignKey("genres.id", ondelete="CASCADE"), nullable=False)
+    genre = relationship("Genre", back_populates="books")
     cover = Column(String, nullable=False)
     description = Column(String, nullable=False)
     rating = Column(Float, nullable=False)
@@ -44,8 +44,8 @@ class Book(Base):
 class Review(Base):
     __tablename__ = "reviews"
     id = Column(Integer, primary_key=True)
-    book_id = Column(Integer, ForeignKey("books.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    book_id = Column(Integer, ForeignKey("books.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     rating = Column(Float, nullable=False)
     comment = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
