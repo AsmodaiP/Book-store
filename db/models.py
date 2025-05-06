@@ -3,9 +3,10 @@ from datetime import datetime
 
 from flask_login import UserMixin
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Text, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+import enum
 
 Base = declarative_base()
 
@@ -19,6 +20,9 @@ class User(Base, UserMixin):
     is_verified = Column(Boolean, default=False)
     verification_code = Column(String(length=6), nullable=True)
     verification_code_expires = Column(DateTime, nullable=True)
+
+    # Relationships
+    orders = relationship("Order", back_populates="user")
 
 
 class Genre(Base):
@@ -56,3 +60,41 @@ class Review(Base):
 
     book = relationship("Book", backref="reviews")
     user = relationship("User", backref="reviews")
+
+
+class OrderStatus(enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
+    total_amount = Column(Float, nullable=False)
+    shipping_address = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="orders")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    book_id = Column(Integer, ForeignKey("books.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    price = Column(Float, nullable=False)  # Price at the time of order
+
+    # Relationships
+    order = relationship("Order", back_populates="items")
+    book = relationship("Book")

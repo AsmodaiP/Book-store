@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List
 from datetime import datetime
 import re
+from db.models import OrderStatus
 
 
 # User schemas
@@ -106,3 +107,48 @@ class ReviewResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Order schemas
+class OrderItemBase(BaseModel):
+    book_id: int
+    quantity: int = Field(..., gt=0)
+
+
+class OrderItemCreate(OrderItemBase):
+    pass
+
+
+class OrderItemResponse(OrderItemBase):
+    id: int
+    price: float
+    order_id: int
+
+    class Config:
+        orm_mode = True
+
+
+class OrderBase(BaseModel):
+    shipping_address: str = Field(..., min_length=10, max_length=255)
+
+
+class OrderCreate(OrderBase):
+    items: List[OrderItemCreate]
+
+
+class OrderResponse(OrderBase):
+    id: int
+    user_id: int
+    status: OrderStatus
+    total_amount: float
+    created_at: datetime
+    updated_at: datetime
+    items: List[OrderItemResponse]
+
+    class Config:
+        orm_mode = True
+
+
+class OrderUpdate(BaseModel):
+    status: Optional[OrderStatus] = None
+    shipping_address: Optional[str] = Field(None, min_length=10, max_length=255)
