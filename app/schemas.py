@@ -1,45 +1,36 @@
-from pydantic import BaseModel, EmailStr, Field, UUID4
-from typing import Optional
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List
 from datetime import datetime
 
 
 # Book schemas
 class BookBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=200)
-    author: str = Field(..., min_length=1, max_length=200)
-    price: float = Field(..., gt=0)
-    genre: str = Field(..., min_length=1, max_length=100)
-    cover: str = Field(..., min_length=1)
-    description: str = Field(..., min_length=1)
-    rating: float = Field(..., ge=0, le=5)
-    year: int = Field(..., gt=0)
-
-
-class BookCreate(BookBase):
-    pass
-
-
-class BookUpdate(BookBase):
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    author: Optional[str] = Field(None, min_length=1, max_length=200)
-    price: Optional[float] = Field(None, gt=0)
-    genre: Optional[str] = Field(None, min_length=1, max_length=100)
-    cover: Optional[str] = Field(None, min_length=1)
-    description: Optional[str] = Field(None, min_length=1)
-    rating: Optional[float] = Field(None, ge=0, le=5)
-    year: Optional[int] = Field(None, gt=0)
-
-
-class BookResponse(BaseModel):
-    id: UUID4
     title: str
     author: str
     price: float
     genre: str
     cover: str
     description: str
-    rating: float
     year: int
+
+
+class BookCreate(BookBase):
+    pass
+
+
+class BookUpdate(BaseModel):
+    title: Optional[str] = None
+    author: Optional[str] = None
+    price: Optional[float] = None
+    genre: Optional[str] = None
+    cover: Optional[str] = None
+    description: Optional[str] = None
+    year: Optional[int] = None
+
+
+class BookResponse(BookBase):
+    id: int
+    rating: float
     created_at: datetime
     updated_at: datetime
 

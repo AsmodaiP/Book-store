@@ -1,12 +1,10 @@
 from enum import unique
 from datetime import datetime
-import uuid
 
 from flask_login import UserMixin
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 Base = declarative_base()
@@ -29,7 +27,7 @@ class Genre(Base):
 class Book(Base):
     __tablename__ = "books"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String, nullable=False)
     author = Column(String, nullable=False)
     price = Column(Float, nullable=False)
@@ -46,7 +44,7 @@ class Book(Base):
 class Review(Base):
     __tablename__ = "reviews"
     id = Column(Integer, primary_key=True)
-    book_id = Column(UUID(as_uuid=True), ForeignKey("books.id"), nullable=False)
+    book_id = Column(Integer, ForeignKey("books.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     rating = Column(Float, nullable=False)
     comment = Column(String, nullable=True)

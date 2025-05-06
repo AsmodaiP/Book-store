@@ -1,9 +1,9 @@
-from flask_restx import Resource, fields
+from flask_restx import Resource, fields, Namespace
 from flask import request, jsonify
 from app.api import api
 from db.database import get_db
 from db.models import Book, Genre, Review
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from app.schemas import BookCreate, BookUpdate, BookResponse, ReviewCreate, ReviewResponse
 from uuid import UUID
 from flask_login import login_required, current_user
@@ -12,7 +12,7 @@ import json
 from pydantic import ValidationError
 
 # Create namespace
-ns = api.namespace("books", description="Book operations")
+ns = Namespace("books", description="Book operations")
 
 # Define models for Swagger documentation
 book_model = api.model(
@@ -112,67 +112,52 @@ class BookList(Resource):
             api.abort(400, str(e))
 
 
-@ns.route("/<uuid:id>")
-@ns.param("id", "The book identifier")
-@ns.response(404, "Book not found")
+@ns.route("/<int:id>")
 class BookResource(Resource):
     @ns.doc("get_book")
     @ns.marshal_with(book_model)
-    def get(self, id: UUID):
-        """Get a book by its ID"""
+    def get(self, id: int):
+        """Get a book by ID"""
         db = get_db()
         book = db.query(Book).filter(Book.id == id).first()
         if not book:
-            return {"error": "Book not found"}, 404
+            api.abort(404, message=f"Book {id} not found")
         return book_to_response(book)
 
     @ns.doc("update_book")
     @ns.expect(book_model)
     @ns.marshal_with(book_model)
-    def put(self, id: UUID):
+    def put(self, id: int):
         """Update a book"""
         db = get_db()
         book = db.query(Book).filter(Book.id == id).first()
         if not book:
-            return {"error": "Book not found"}, 404
+            api.abort(404, message=f"Book {id} not found")
+
+        data = request.json
+        for key, value in data.items():
+            setattr(book, key, value)
 
         try:
-            # Validate input data using Pydantic
-            book_data = BookUpdate(**api.payload)
-            update_data = book_data.dict(exclude_unset=True)
-            if "genre" in update_data:
-                genre = db.query(Genre).filter_by(name=update_data["genre"]).first()
-                if not genre:
-                    genre = Genre(name=update_data["genre"])
-                    db.add(genre)
-                    db.commit()
-                book.genre_id = genre.id
-                del update_data["genre"]
-            for key, value in update_data.items():
-                setattr(book, key, value)
             db.commit()
-            db.refresh(book)
-            return book_to_response(book)
-        except SQLAlchemyError as e:
+        except IntegrityError:
             db.rollback()
-            api.abort(400, str(e))
+            api.abort(400, message="Invalid data")
+
+        return book_to_response(book)
 
     @ns.doc("delete_book")
     @ns.response(204, "Book deleted")
-    def delete(self, id: UUID):
+    def delete(self, id: int):
         """Delete a book"""
         db = get_db()
         book = db.query(Book).filter(Book.id == id).first()
         if not book:
-            return {"error": "Book not found"}, 404
+            api.abort(404, message=f"Book {id} not found")
 
-        try:
-            db.delete(book)
-            db.commit()
-            return "", 204
-        except SQLAlchemyError as e:
-            db.rollback()
-            api.abort(400, str(e))
+        db.delete(book)
+        db.commit()
+        return "", 204
 
 
 @ns.route("/top")
@@ -187,7 +172,7 @@ class TopBooks(Resource):
         return [book_to_response(book) for book in books]
 
 
-@ns.route("/<uuid:book_id>/review")
+@ns.route("/<int:book_id>/review")
 class BookReview(Resource):
     @login_required
     @ns.expect(review_model)
@@ -239,7 +224,7 @@ class BookReview(Resource):
         return "", 204
 
 
-@ns.route("/<uuid:book_id>/reviews")
+@ns.route("/<int:book_id>/reviews")
 class BookReviews(Resource):
     def get(self, book_id):
         """Get all reviews for a book."""
