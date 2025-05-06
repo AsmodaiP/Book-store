@@ -6,15 +6,30 @@ from app.schemas import UserVerify
 from datetime import datetime, timedelta
 import random
 import string
+from flask_login import login_required, current_user
 
 ns = Namespace("auth", description="Authentication operations")
 
 # Define models for Swagger documentation
+send_code_response_model = ns.model(
+    "SendCodeResponse",
+    {
+        "message": fields.String(description="Response message"),
+        "code": fields.String(description="Verification code (only for testing)"),
+    },
+)
+
 verify_model = ns.model(
     "Verify",
     {
-        "phone": fields.String(required=True, description="Phone number"),
         "code": fields.String(required=True, description="Verification code"),
+    },
+)
+
+verify_response_model = ns.model(
+    "VerifyResponse",
+    {
+        "message": fields.String(description="Response message"),
     },
 )
 
@@ -22,56 +37,62 @@ verify_model = ns.model(
 @ns.route("/send-code")
 class SendVerificationCode(Resource):
     @ns.doc("send_verification_code")
+    @ns.response(200, "Success", send_code_response_model)
+    @ns.response(401, "Not authenticated")
+    @login_required
     def post(self):
-        """Send verification code to phone number"""
+        """Send verification code to current user's phone number"""
         db = get_db()
-        phone = request.json.get("phone")
 
-        # Проверяем, существует ли пользователь с таким номером
-        user = db.query(User).filter(User.phone == phone).first()
-        if not user:
-            return jsonify({"error": "User with this phone number not found"}), 404
+        # Get current user's phone number
+        phone = current_user.phone
 
-        # Генерируем код подтверждения
+        # Generate verification code
         code = "".join(random.choices(string.digits, k=6))
-        expires = datetime.utcnow() + timedelta(minutes=15)  # Код действителен 15 минут
+        expires = datetime.utcnow() + timedelta(minutes=15)  # Code valid for 15 minutes
 
-        # Сохраняем код в базе
-        user.verification_code = code
-        user.verification_code_expires = expires
+        # Save code in database
+        current_user.verification_code = code
+        current_user.verification_code_expires = expires
         db.commit()
 
-        # TODO: Здесь должна быть отправка SMS с кодом
-        # Для тестирования возвращаем код в ответе
-        return jsonify({"message": "Verification code sent", "code": code}), 200
+        # TODO: Here should be SMS sending with the code
+        # For testing, returning code in response
+        return {"message": "Verification code sent", "code": code}, 200  # Remove this in production
 
 
 @ns.route("/verify")
 class VerifyPhone(Resource):
+
     @ns.doc("verify_phone")
     @ns.expect(verify_model)
+    @ns.response(200, "Success", verify_response_model)
+    @ns.response(400, "Invalid verification code")
+    @ns.response(401, "Not authenticated")
+    @login_required
     def post(self):
-        """Verify phone number with code"""
+        """Verify current user's phone number with code"""
         db = get_db()
-        data = UserVerify(**request.json)
+        data = request.get_json()
 
-        user = db.query(User).filter(User.phone == data.phone).first()
-        if not user:
-            return jsonify({"error": "User with this phone number not found"}), 404
+        if not data or "code" not in data:
+            return {"error": "Verification code is required"}, 400
 
-        if not user.verification_code or not user.verification_code_expires:
-            return jsonify({"error": "No verification code was sent"}), 400
+        code = data["code"]
 
-        if datetime.utcnow() > user.verification_code_expires:
-            return jsonify({"error": "Verification code has expired"}), 400
+        if not current_user.verification_code or not current_user.verification_code_expires:
+            return {"error": "No verification code was sent"}, 400
 
-        if user.verification_code != data.code:
-            return jsonify({"error": "Invalid verification code"}), 400
+        if datetime.utcnow() > current_user.verification_code_expires:
+            return {"error": "Verification code has expired"}, 400
 
-        # Подтверждаем пользователя
-        user.is_verified = True
-        user.verification_code = None
-        user.verification_code_expires = None
+        if current_user.verification_code != code:
+            return {"error": "Invalid verification code"}, 400
+
+        # Verify user
+        current_user.is_verified = True
+        current_user.verification_code = None
+        current_user.verification_code_expires = None
         db.commit()
 
-        return jsonify({"message": "Phone number verified successfully"}), 200
+        return {"message": "Phone number verified successfully"}, 200
