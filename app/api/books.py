@@ -60,7 +60,16 @@ def book_to_response(book: Book) -> dict:
 
 
 def review_to_response(review: Review) -> dict:
-    return json.loads(ReviewResponse.from_orm(review).json())
+    return json.loads(
+        ReviewResponse(
+            id=int(review.id),
+            user_id=int(review.user_id),
+            username=str(review.user.username),
+            rating=float(review.rating),
+            comment=str(review.comment) if review.comment else None,
+            created_at=review.created_at,
+        ).json()
+    )
 
 
 @ns.route("/")

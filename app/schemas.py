@@ -101,6 +101,7 @@ class ReviewCreate(BaseModel):
 class ReviewResponse(BaseModel):
     id: int
     user_id: int
+    username: str
     rating: float
     comment: Optional[str]
     created_at: datetime
