@@ -126,7 +126,7 @@ class OrderItemResponse(OrderItemBase):
     order_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class OrderBase(BaseModel):
@@ -147,7 +147,7 @@ class OrderResponse(OrderBase):
     items: List[OrderItemResponse]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class OrderUpdate(BaseModel):
