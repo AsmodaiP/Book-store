@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List
 from datetime import datetime
 import re
+from enum import Enum
 from db.models import OrderStatus
 
 
@@ -137,14 +138,28 @@ class OrderCreate(OrderBase):
     items: List[OrderItemCreate]
 
 
+class OrderStatusEnum(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+
 class OrderResponse(OrderBase):
     id: int
     user_id: int
-    status: OrderStatus
+    status: str
     total_amount: float
     created_at: datetime
     updated_at: datetime
     items: List[OrderItemResponse]
+
+    @validator("status", pre=True)
+    def convert_status(cls, v):
+        if isinstance(v, OrderStatus):
+            return v.value
+        return v
 
     class Config:
         from_attributes = True

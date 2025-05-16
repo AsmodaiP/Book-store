@@ -7,6 +7,7 @@ from app.schemas import OrderCreate, OrderResponse, OrderUpdate
 from flask_login import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
 from http import HTTPStatus
+from db.models import OrderStatus
 
 # Create namespace
 ns = Namespace("orders", description="Order operations")
@@ -26,7 +27,7 @@ order_model = api.model(
     {
         "id": fields.Integer(description="Order ID"),
         "user_id": fields.Integer(description="User ID"),
-        "status": fields.String(description="Order status"),
+        "status": fields.String(description="Order status", enum=[status.value for status in OrderStatus]),
         "total_amount": fields.Float(description="Total order amount"),
         "shipping_address": fields.String(required=True, description="Shipping address"),
         "created_at": fields.DateTime(description="Creation timestamp"),
